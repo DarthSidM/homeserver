@@ -29,7 +29,7 @@ func main() {
 
 	defer sqldb.Close()
 
-	if err := db.AutoMigrate(&models.User{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Storage{}); err != nil {
     	log.Fatalf("Could not run migrations: %v", err)
 	}
 
