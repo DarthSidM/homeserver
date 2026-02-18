@@ -1,6 +1,8 @@
 package services
 
 import (
+	"errors"
+	"os"
 	"time"
 
 	"homeserver/internals/models"
@@ -56,6 +58,11 @@ func (s *UserAuthService) CheckPassword(hashedPassword, password string) bool {
 }
 
 func (s *UserAuthService) IssueJWT(username string) (string, error) {
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		return "", errors.New("JWT_SECRET is not set")
+	}
+
 	claims := jwt.MapClaims{
 		"username": username,
 		"exp":      time.Now().Add(time.Hour * 24).Unix(),
@@ -63,7 +70,7 @@ func (s *UserAuthService) IssueJWT(username string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte("your-secret-key"))
+	tokenString, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
 		return "", err
 	}
