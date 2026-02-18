@@ -14,3 +14,8 @@
 - ./cmd/storage-agent/ contains the main.go file as the entry point
 - uses the same database.go as the server 
 - executable created at ./cmd/executable/ 
+
+## Go-server
+- ./internals/ contains files for the server
+- ./configs/ contains the database.go
+- ./cmd/server/ contains the main.go for the server
