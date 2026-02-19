@@ -70,6 +70,7 @@ Restart=always
 RestartSec=5
 User=root
 Environment=ENV=production
+EnvironmentFile=/etc/homeserver/storage-agent.env
 
 [Install]
 WantedBy=multi-user.target
