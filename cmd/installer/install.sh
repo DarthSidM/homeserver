@@ -9,8 +9,8 @@ STORAGE_ROOT="/storage"
 DEFAULT_DATA_DIR="/var/lib/homeserver-data"
 DEFAULT_MOUNT="$STORAGE_ROOT/default"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BINARY_SOURCE="$SCRIPT_DIR/../executable/storage-agent"
-BINARY_DEST="/usr/local/bin/storage-agent"
+BINARY_SOURCE="$SCRIPT_DIR/../executable/storage-agent.exe"
+BINARY_DEST="/usr/local/bin/storage-agent.exe"
 SERVICE_FILE="/etc/systemd/system/storage-agent.service"
 
 # ---- CHECK ROOT ----
