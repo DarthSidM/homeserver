@@ -2,8 +2,8 @@ package main
 
 import (
 	database "homeserver/configs"
-	"homeserver/internals/routes"
 	"homeserver/internals/models"
+	"homeserver/internals/routes"
 	"log"
 	"os"
 
@@ -30,9 +30,8 @@ func main() {
 	defer sqldb.Close()
 
 	if err := db.AutoMigrate(&models.User{}, &models.Storage{}, &models.Node{}); err != nil {
-    	log.Fatalf("Could not run migrations: %v", err)
+		log.Fatalf("Could not run migrations: %v", err)
 	}
-
 
 	app := fiber.New()
 
@@ -41,6 +40,7 @@ func main() {
 	})
 
 	routes.SetupUserAuthRoutes(app, db)
+	routes.SetupNodeRoutes(app, db)
 
 	log.Println("server is running")
 	app.Listen(":" + port)
