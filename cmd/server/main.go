@@ -41,6 +41,7 @@ func main() {
 
 	routes.SetupUserAuthRoutes(app, db)
 	routes.SetupNodeRoutes(app, db)
+	routes.SetupDirectoryRoutes(app, db)
 
 	log.Println("server is running")
 	app.Listen(":" + port)
