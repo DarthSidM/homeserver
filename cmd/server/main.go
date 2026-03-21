@@ -12,9 +12,9 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
+	err := godotenv.Load(".env", "cmd/server/.env",)
 	if err != nil {
-		log.Println("could not load .env file")
+		log.Println("could not load .env file from known paths")
 	}
 
 	port := os.Getenv("PORT")
@@ -42,6 +42,7 @@ func main() {
 	routes.SetupUserAuthRoutes(app, db)
 	routes.SetupNodeRoutes(app, db)
 	routes.SetupDirectoryRoutes(app, db)
+	routes.SetupFileRoutes(app, db)
 
 	log.Println("server is running")
 	app.Listen(":" + port)
