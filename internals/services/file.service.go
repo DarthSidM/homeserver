@@ -18,19 +18,25 @@ import (
 var (
 	ErrNoActiveStorage       = errors.New("no active storage available")
 	ErrInsufficientDiskSpace = errors.New("insufficient disk space")
+	ErrFileNotFound          = errors.New("file not found")
+	ErrStorageMissing        = errors.New("file storage not found")
+	ErrFileMissingOnDisk     = errors.New("file is missing on disk")
+	ErrNodeIsNotAFile        = errors.New("node is not a file")
 )
 
 type FileService interface {
 	UploadFile(ctx context.Context, userID uuid.UUID, parentID *uuid.UUID, originalName string, file multipart.File, size int64) (*models.Node, error)
+	DownloadFile(ctx context.Context, userID uuid.UUID, fileID uuid.UUID) (string, string, error)
 }
 
 type fileService struct {
 	repo        repos.FileRepository
 	storageRepo repos.StorageRepository
+	nodeRepo    repos.NodeRepository
 }
 
-func NewFileService(repo repos.FileRepository, storageRepo repos.StorageRepository) FileService {
-	return &fileService{repo: repo, storageRepo: storageRepo}
+func NewFileService(repo repos.FileRepository, storageRepo repos.StorageRepository, nodeRepo repos.NodeRepository) FileService {
+	return &fileService{repo: repo, storageRepo: storageRepo, nodeRepo: nodeRepo}
 }
 
 func (s *fileService) UploadFile(ctx context.Context, userID uuid.UUID, parentID *uuid.UUID, originalName string, file multipart.File, size int64) (*models.Node, error) {
@@ -115,4 +121,46 @@ func (s *fileService) selectStorage(ctx context.Context, size int64) (*models.St
 	}
 
 	return nil, ErrInsufficientDiskSpace
+}
+
+func (s *fileService) DownloadFile(ctx context.Context, userID uuid.UUID, fileID uuid.UUID) (string, string, error) {
+	if userID == uuid.Nil {
+		return "", "", errors.New("invalid user id")
+	}
+
+	node, err := s.nodeRepo.GetByID(ctx, userID, fileID)
+	if err != nil {
+		return "", "", err
+	}
+	if node == nil {
+		return "", "", ErrFileNotFound
+	}
+
+	if !strings.EqualFold(node.Type, "file") {
+		return "", "", ErrNodeIsNotAFile
+	}
+
+	if node.StorageID == nil {
+		return "", "", ErrStorageMissing
+	}
+
+	storage, err := s.storageRepo.GetByID(ctx, *node.StorageID)
+	if err != nil {
+		return "", "", err
+	}
+	if storage == nil {
+		return "", "", ErrStorageMissing
+	}
+
+	fileExt := strings.TrimSpace(filepath.Ext(node.Name))
+	storedFilePath := filepath.Join(storage.MountPath, node.ID.String()+fileExt)
+
+	if _, err := os.Stat(storedFilePath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", "", ErrFileMissingOnDisk
+		}
+		return "", "", err
+	}
+
+	return storedFilePath, node.Name, nil
 }

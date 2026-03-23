@@ -72,6 +72,36 @@ func (h *FileHandler) UploadFile(c fiber.Ctx) error {
 	})
 }
 
+func (h *FileHandler) DownloadFile(c fiber.Ctx) error {
+	userID, err := h.authenticatedUserID(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	fileIDParam := strings.TrimSpace(c.Params("fileID"))
+	fileID, err := uuid.Parse(fileIDParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid file id"})
+	}
+
+	filePath, fileName, err := h.fileService.DownloadFile(context.Background(), userID, fileID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrFileNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		case errors.Is(err, services.ErrNodeIsNotAFile):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		case errors.Is(err, services.ErrStorageMissing), errors.Is(err, services.ErrFileMissingOnDisk):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to download file"})
+		}
+	}
+
+	c.Attachment(fileName)
+	return c.SendFile(filePath)
+}
+
 func (h *FileHandler) authenticatedUserID(c fiber.Ctx) (uuid.UUID, error) {
 	username, ok := c.Locals("username").(string)
 	if !ok || strings.TrimSpace(username) == "" {
