@@ -14,7 +14,8 @@ func SetupFileRoutes(app *fiber.App, db *gorm.DB) {
 	userRepo := repos.NewUserRepository(db)
 	userService := services.NewUserAuthService(userRepo)
 	fileRepo := repos.NewFileRepository(db)
-	fileService := services.NewFileService(fileRepo)
+	storageRepo := repos.NewStorageRepository(db)
+	fileService := services.NewFileService(fileRepo, storageRepo)
 	fileHandler := handlers.NewFileHandler(fileService, userService)
 
 	files := app.Group("/files", middlerwares.AuthMiddleware())

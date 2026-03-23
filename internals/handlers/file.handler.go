@@ -52,8 +52,10 @@ func (h *FileHandler) UploadFile(c fiber.Ctx) error {
 
 	createdFile, err := h.fileService.UploadFile(context.Background(), userID, parentID, fileHeader.Filename, src, fileHeader.Size)
 	if err != nil {
-		switch err.Error() {
-		case "file name cannot be empty", "invalid user id":
+		switch {
+		case errors.Is(err, services.ErrNoActiveStorage), errors.Is(err, services.ErrInsufficientDiskSpace):
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
+		case err.Error() == "file name cannot be empty", err.Error() == "invalid user id":
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		default:
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to upload file"})
@@ -61,11 +63,12 @@ func (h *FileHandler) UploadFile(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"id":        createdFile.ID,
-		"name":      createdFile.Name,
-		"parent_id": createdFile.ParentID,
-		"type":      createdFile.Type,
-		"size":      createdFile.Size,
+		"id":         createdFile.ID,
+		"name":       createdFile.Name,
+		"parent_id":  createdFile.ParentID,
+		"type":       createdFile.Type,
+		"size":       createdFile.Size,
+		"storage_id": createdFile.StorageID,
 	})
 }
 

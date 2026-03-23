@@ -10,7 +10,7 @@ import (
 )
 
 type FileRepository interface {
-	CreateFile(ctx context.Context, id uuid.UUID, name string, parentID *uuid.UUID, userID uuid.UUID, size int64) (*models.Node, error)
+	CreateFile(ctx context.Context, id uuid.UUID, storageID uuid.UUID, name string, parentID *uuid.UUID, userID uuid.UUID, size int64) (*models.Node, error)
 }
 
 type fileRepository struct {
@@ -21,14 +21,15 @@ func NewFileRepository(db *gorm.DB) FileRepository {
 	return &fileRepository{db: db}
 }
 
-func (r *fileRepository) CreateFile(ctx context.Context, id uuid.UUID, name string, parentID *uuid.UUID, userID uuid.UUID, size int64) (*models.Node, error) {
+func (r *fileRepository) CreateFile(ctx context.Context, id uuid.UUID, storageID uuid.UUID, name string, parentID *uuid.UUID, userID uuid.UUID, size int64) (*models.Node, error) {
 	node := &models.Node{
-		ID:       id,
-		ParentID: parentID,
-		UserID:   userID,
-		Name:     name,
-		Type:     "file",
-		Size:     size,
+		ID:        id,
+		ParentID:  parentID,
+		UserID:    userID,
+		Name:      name,
+		Type:      "file",
+		Size:      size,
+		StorageID: &storageID,
 	}
 
 	if err := r.db.WithContext(ctx).Create(node).Error; err != nil {
