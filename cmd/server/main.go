@@ -8,11 +8,12 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load(".env", "cmd/server/.env",)
+	err := godotenv.Load(".env", "cmd/server/.env")
 	if err != nil {
 		log.Println("could not load .env file from known paths")
 	}
@@ -34,6 +35,13 @@ func main() {
 	}
 
 	app := fiber.New()
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
 	app.Get("/", func(c fiber.Ctx) error {
 		return c.SendString("hello from homesever")
