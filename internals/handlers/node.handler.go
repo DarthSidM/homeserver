@@ -126,13 +126,11 @@ func (h *NodeHandler) MarkFavouriteNode(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid node_id"})
 	}
 
-	err = h.nodeService.MarkFavouriteNode(context.Background(), userID, nodeID)
+	isMarked, err := h.nodeService.MarkFavouriteNode(context.Background(), userID, nodeID)
 	if err != nil {
 		switch err.Error() {
 		case "node not found":
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
-		case "node already marked favourite":
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
 		case "invalid user id":
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		default:
@@ -140,7 +138,14 @@ func (h *NodeHandler) MarkFavouriteNode(c fiber.Ctx) error {
 		}
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "node marked as favourite"})
+	var message string
+	if isMarked {
+		message = "node marked as favourite"
+	} else {
+		message = "node removed from favourites"
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": message})
 }
 
 func (h *NodeHandler) GetFavouriteNodes(c fiber.Ctx) error {

@@ -15,7 +15,7 @@ type NodeService interface {
 	ListNodes(ctx context.Context, userID uuid.UUID, parentID *uuid.UUID) ([]models.Node, error)
 	RenameNode(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID, newName string) (*models.Node, error)
 	DeleteNode(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) error
-	MarkFavouriteNode(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) error
+	MarkFavouriteNode(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) (bool, error)
 	GetFavouriteNodes(ctx context.Context, userID uuid.UUID) ([]models.Node, error)
 }
 
@@ -89,29 +89,30 @@ func (s *nodeService) DeleteNode(ctx context.Context, userID uuid.UUID, nodeID u
 	return s.repo.SoftDeleteSubtree(ctx, userID, nodeID)
 }
 
-func (s *nodeService) MarkFavouriteNode(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) error {
+func (s *nodeService) MarkFavouriteNode(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) (bool, error) {
 	if userID == uuid.Nil {
-		return errors.New("invalid user id")
+		return false, errors.New("invalid user id")
 	}
 
 	node, err := s.repo.GetByID(ctx, userID, nodeID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if node == nil {
-		return errors.New("node not found")
+		return false, errors.New("node not found")
 	}
 
 	isFavourite, err := s.repo.IsFavourite(ctx, userID, nodeID)
 	if err != nil {
-		return err
+		return false, err
 	}
+
 	if isFavourite {
-		return errors.New("node already marked favourite")
+		return false, s.repo.DeleteFavourite(ctx, userID, nodeID)
 	}
 
 	_, err = s.repo.CreateFavourite(ctx, userID, nodeID)
-	return err
+	return true, err
 }
 
 func (s *nodeService) GetFavouriteNodes(ctx context.Context, userID uuid.UUID) ([]models.Node, error) {

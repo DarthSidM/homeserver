@@ -19,6 +19,7 @@ type NodeRepository interface {
 	SoftDeleteSubtree(ctx context.Context, userID uuid.UUID, rootID uuid.UUID) error
 	IsFavourite(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) (bool, error)
 	CreateFavourite(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) (*models.Favourite, error)
+	DeleteFavourite(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) error
 	ListFavouriteNodes(ctx context.Context, userID uuid.UUID) ([]models.Node, error)
 }
 
@@ -141,6 +142,12 @@ func (r *nodeRepository) CreateFavourite(ctx context.Context, userID uuid.UUID, 
 	}
 
 	return favourite, nil
+}
+
+func (r *nodeRepository) DeleteFavourite(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Delete(&models.Favourite{}, "user_id = ? AND node_id = ?", userID, nodeID).
+		Error
 }
 
 func (r *nodeRepository) ListFavouriteNodes(ctx context.Context, userID uuid.UUID) ([]models.Node, error) {
