@@ -110,6 +110,57 @@ func (h *NodeHandler) DeleteNode(c fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "node deleted successfully"})
 }
 
+func (h *NodeHandler) MarkFavouriteNode(c fiber.Ctx) error {
+	userID, err := h.authenticatedUserID(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	nodeIDParam := strings.TrimSpace(c.Query("node_id"))
+	if nodeIDParam == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "node_id is required"})
+	}
+
+	nodeID, err := uuid.Parse(nodeIDParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid node_id"})
+	}
+
+	err = h.nodeService.MarkFavouriteNode(context.Background(), userID, nodeID)
+	if err != nil {
+		switch err.Error() {
+		case "node not found":
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		case "node already marked favourite":
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
+		case "invalid user id":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to mark favourite node"})
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "node marked as favourite"})
+}
+
+func (h *NodeHandler) GetFavouriteNodes(c fiber.Ctx) error {
+	userID, err := h.authenticatedUserID(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	nodes, err := h.nodeService.GetFavouriteNodes(context.Background(), userID)
+	if err != nil {
+		if err.Error() == "invalid user id" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get favourite nodes"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"nodes": nodes})
+}
+
 func (h *NodeHandler) authenticatedUserID(c fiber.Ctx) (uuid.UUID, error) {
 	username, ok := c.Locals("username").(string)
 	if !ok || strings.TrimSpace(username) == "" {

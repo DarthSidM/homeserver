@@ -19,6 +19,8 @@ func SetupNodeRoutes(app *fiber.App, db *gorm.DB) {
 
 	nodes := app.Group("/nodes", middlerwares.AuthMiddleware())
 	nodes.Get("/", nodeHandler.ListNodes)
+	nodes.Post("/favourites", nodeHandler.MarkFavouriteNode)
+	nodes.Get("/favourites", nodeHandler.GetFavouriteNodes)
 	nodes.Patch("/:id", nodeHandler.RenameNode)
 	nodes.Delete("/:id", nodeHandler.DeleteNode)
 }
