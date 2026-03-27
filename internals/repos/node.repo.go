@@ -21,6 +21,7 @@ type NodeRepository interface {
 	CreateFavourite(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) (*models.Favourite, error)
 	DeleteFavourite(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) error
 	ListFavouriteNodes(ctx context.Context, userID uuid.UUID) ([]models.Node, error)
+	SearchNodes(ctx context.Context, userID uuid.UUID, query string) ([]models.Node, error)
 }
 
 type nodeRepository struct {
@@ -166,4 +167,68 @@ func (r *nodeRepository) ListFavouriteNodes(ctx context.Context, userID uuid.UUI
 	}
 
 	return nodes, nil
+}
+
+func (r *nodeRepository) SearchNodes(ctx context.Context, userID uuid.UUID, query string) ([]models.Node, error) {
+	var nodes []models.Node
+
+	// Get underlying sql.DB connection to bypass GORM's query processing
+	sqlDB, err := r.db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	// First verify the FTS5 table exists
+	var tableExists int
+	checkTableSQL := "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='nodes_fts'"
+	err = sqlDB.QueryRowContext(ctx, checkTableSQL).Scan(&tableExists)
+	if err != nil || tableExists == 0 {
+		// Fall back to LIKE search if FTS5 table doesn't exist
+		likeQuery := "%" + query + "%"
+		err = r.db.WithContext(ctx).
+			Where("user_id = ?", userID).
+			Where("deleted_at IS NULL").
+			Where("name LIKE ?", likeQuery).
+			Order("name ASC").
+			Find(&nodes).Error
+		return nodes, err
+	}
+
+	// Try FTS5 search with direct query
+	sql := `
+	SELECT n.id, n.parent_id, n.user_id, n.name, n.type, n.size, n.storage_id, n.created_at, n.updated_at, n.deleted_at
+	FROM nodes n
+	INNER JOIN nodes_fts fts ON n.id = fts.node_id
+	WHERE n.user_id = ? 
+	AND n.deleted_at IS NULL 
+	AND fts MATCH ?
+	ORDER BY n.name ASC
+	`
+
+	rows, err := sqlDB.QueryContext(ctx, sql, userID.String(), query)
+	if err != nil {
+		// If FTS5 query fails, fall back to LIKE
+		likeQuery := "%" + query + "%"
+		err = r.db.WithContext(ctx).
+			Where("user_id = ?", userID).
+			Where("deleted_at IS NULL").
+			Where("name LIKE ?", likeQuery).
+			Order("name ASC").
+			Find(&nodes).Error
+		return nodes, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var node models.Node
+		if err := rows.Scan(
+			&node.ID, &node.ParentID, &node.UserID, &node.Name, &node.Type,
+			&node.Size, &node.StorageID, &node.CreatedAt, &node.UpdatedAt, &node.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, node)
+	}
+
+	return nodes, rows.Err()
 }

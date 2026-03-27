@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -161,6 +162,33 @@ func (h *NodeHandler) GetFavouriteNodes(c fiber.Ctx) error {
 		}
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get favourite nodes"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"nodes": nodes})
+}
+
+func (h *NodeHandler) SearchNodes(c fiber.Ctx) error {
+	userID, err := h.authenticatedUserID(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	query := strings.TrimSpace(c.Query("q"))
+	if query == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "query parameter 'q' is required"})
+	}
+
+	nodes, err := h.nodeService.SearchNodes(context.Background(), userID, query)
+	if err != nil {
+		log.Printf("SearchNodes error: %v", err)
+		switch err.Error() {
+		case "invalid user id":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		case "search query cannot be empty":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to search nodes", "details": err.Error()})
+		}
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"nodes": nodes})

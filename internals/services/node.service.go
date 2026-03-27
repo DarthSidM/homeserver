@@ -17,6 +17,7 @@ type NodeService interface {
 	DeleteNode(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) error
 	MarkFavouriteNode(ctx context.Context, userID uuid.UUID, nodeID uuid.UUID) (bool, error)
 	GetFavouriteNodes(ctx context.Context, userID uuid.UUID) ([]models.Node, error)
+	SearchNodes(ctx context.Context, userID uuid.UUID, query string) ([]models.Node, error)
 }
 
 type nodeService struct {
@@ -121,4 +122,17 @@ func (s *nodeService) GetFavouriteNodes(ctx context.Context, userID uuid.UUID) (
 	}
 
 	return s.repo.ListFavouriteNodes(ctx, userID)
+}
+
+func (s *nodeService) SearchNodes(ctx context.Context, userID uuid.UUID, query string) ([]models.Node, error) {
+	if userID == uuid.Nil {
+		return nil, errors.New("invalid user id")
+	}
+
+	trimmedQuery := strings.TrimSpace(query)
+	if trimmedQuery == "" {
+		return nil, errors.New("search query cannot be empty")
+	}
+
+	return s.repo.SearchNodes(ctx, userID, trimmedQuery)
 }

@@ -9,3 +9,7 @@ type RenameNodeResponse struct {
 	Name    string `json:"name"`
 	Message string `json:"message"`
 }
+
+type SearchNodeRequest struct {
+	Query string `json:"query" validate:"required,min=1"`
+}
