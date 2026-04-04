@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -99,6 +100,91 @@ func (h *FileHandler) DownloadFile(c fiber.Ctx) error {
 	}
 
 	c.Attachment(fileName)
+	return c.SendFile(filePath)
+}
+
+func (h *FileHandler) OnlyOfficeSave(c fiber.Ctx) error {
+	fileIDParam := strings.TrimSpace(c.Params("id"))
+	fileID, err := uuid.Parse(fileIDParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid file id"})
+	}
+
+	err = h.fileService.SaveFromOnlyOfficeCallback(context.Background(), fileID, c.Body())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"error": 0})
+}
+
+func (h *FileHandler) GetEditorConfig(c fiber.Ctx) error {
+	userID, err := h.authenticatedUserID(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	fileIDParam := strings.TrimSpace(c.Params("id"))
+	fileID, err := uuid.Parse(fileIDParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid file id"})
+	}
+
+	config, err := h.fileService.GetEditorConfig(context.Background(), userID, fileID, c.BaseURL())
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrFileNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		case errors.Is(err, services.ErrNodeIsNotAFile):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		case err.Error() == "invalid base url":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to generate editor config"})
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(config)
+}
+
+func (h *FileHandler) OnlyOfficeDownload(c fiber.Ctx) error {
+	fileIDParam := strings.TrimSpace(c.Params("id"))
+	fileID, err := uuid.Parse(fileIDParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid file id"})
+	}
+
+	node, err := h.fileService.GetNodeByID(context.Background(), fileID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get file"})
+	}
+	if node == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "file not found"})
+	}
+
+	if !strings.EqualFold(node.Type, "file") {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "node is not a file"})
+	}
+
+	filePath, fileName, err := h.fileService.ResolveFilePath(context.Background(), fileID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrStorageMissing), errors.Is(err, services.ErrFileMissingOnDisk):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to resolve file"})
+		}
+	}
+	// // ✅ CORS FIX
+	// c.Set("Access-Control-Allow-Origin", "*")
+	// c.Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	// c.Set("Access-Control-Allow-Headers", "*")
+	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(fileName)), ".")
+	if ext != "" {
+		c.Type(ext)
+	}
+	c.Set("Content-Disposition", "inline; filename=\""+fileName+"\"")
+
 	return c.SendFile(filePath)
 }
 

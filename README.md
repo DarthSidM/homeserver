@@ -19,3 +19,14 @@
 - ./internals/ contains files for the server
 - ./configs/ contains the database.go
 - ./cmd/server/ contains the main.go for the server
+
+## run onlyoffice docker container
+`docker run -d \
+  --name onlyoffice \
+  -p 8082:80 \
+  -e JWT_ENABLED=true \
+  -e JWT_SECRET=supersecret123 \
+  onlyoffice/documentserver`
+
+## run go server
+`go run -tags "fts5" cmd/server/main.go`

@@ -238,6 +238,35 @@ Both upload endpoints return:
   - `404`: `{ "error": "file not found" }`, `{ "error": "file storage not found" }`, `{ "error": "file is missing on disk" }`
   - `500`: `{ "error": "failed to download file" }`
 
+### OnlyOffice editor config
+
+- Method: `GET`
+- Path: `/files/:id/editor-config`
+- Path params:
+  - `id` (UUID)
+
+- Success (`200`):
+
+```json
+{
+  "document": {
+    "key": "<file-id>-<updated-at-unix>",
+    "title": "file.docx",
+    "url": "http://<host>/files/download/<file-id>"
+  },
+  "editorConfig": {
+    "callbackUrl": "http://<host>/files/<file-id>/save",
+    "mode": "edit"
+  }
+}
+```
+
+- Errors:
+  - `400`: `{ "error": "invalid file id" }`, `{ "error": "node is not a file" }`, `{ "error": "invalid base url" }`
+  - `401`: `{ "error": "unauthorized" }`
+  - `404`: `{ "error": "file not found" }`
+  - `500`: `{ "error": "failed to generate editor config" }`
+
 ## Quick Curl Examples
 
 ```bash

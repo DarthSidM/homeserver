@@ -13,6 +13,7 @@ import (
 type NodeRepository interface {
 	ListByParentID(ctx context.Context, userID uuid.UUID, parentID *uuid.UUID) ([]models.Node, error)
 	GetByID(ctx context.Context, userID uuid.UUID, id uuid.UUID) (*models.Node, error)
+	GetByIDDirect(ctx context.Context, id uuid.UUID) (*models.Node, error)
 	ExistsByNameAndParent(ctx context.Context, userID uuid.UUID, name string, parentID *uuid.UUID) (bool, error)
 	UpdateName(ctx context.Context, userID uuid.UUID, id uuid.UUID, newName string) error
 	SoftDelete(ctx context.Context, userID uuid.UUID, id uuid.UUID) error
@@ -54,6 +55,22 @@ func (r *nodeRepository) GetByID(ctx context.Context, userID uuid.UUID, id uuid.
 
 	if err := r.db.WithContext(ctx).
 		First(&node, "id = ? AND user_id = ?", id, userID).Error; err != nil {
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &node, nil
+}
+
+func (r *nodeRepository) GetByIDDirect(ctx context.Context, id uuid.UUID) (*models.Node, error) {
+	var node models.Node
+
+	if err := r.db.WithContext(ctx).
+		First(&node, "id = ?", id).Error; err != nil {
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

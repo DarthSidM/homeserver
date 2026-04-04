@@ -23,4 +23,8 @@ func SetupFileRoutes(app *fiber.App, db *gorm.DB) {
 	files.Post("/upload", fileHandler.UploadFile)
 	files.Post("/upload/:parentID", fileHandler.UploadFile)
 	files.Get("/download/:fileID", fileHandler.DownloadFile)
+	files.Get("/:id/editor-config", fileHandler.GetEditorConfig)
+
+	app.Get("/onlyoffice/download/:id", fileHandler.OnlyOfficeDownload)
+	app.Post("/onlyoffice/save/:id", fileHandler.OnlyOfficeSave)
 }
