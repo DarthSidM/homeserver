@@ -30,3 +30,6 @@
 
 ## run go server
 `go run -tags "fts5" cmd/server/main.go`
+
+## compile homeserver binary
+`go build -tags "fts5" -o cmd/executable/homeserver cmd/server/main.go`
