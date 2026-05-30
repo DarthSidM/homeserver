@@ -33,3 +33,14 @@
 
 ## compile homeserver binary
 `go build -tags "fts5" -o cmd/executable/homeserver.exe cmd/server/main.go`
+
+## production directory structure
+/etc/homeserver/
+└── homeserver.env
+
+/var/lib/homeserver/
+└── homeserver.db
+
+/usr/local/bin/
+├── homeserver
+└── storage-agent
