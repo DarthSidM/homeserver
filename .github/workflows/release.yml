@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install SQLite Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc sqlite3 libsqlite3-dev
+
+      - name: Download Dependencies
+        run: go mod download
+
+      - name: Create Release Directory
+        run: mkdir -p dist
+
+      - name: Build HomeServer
+        run: |
+          CGO_ENABLED=1 \
+          GOOS=linux \
+          GOARCH=amd64 \
+          go build \
+            -tags "fts5" \
+            -ldflags="-s -w" \
+            -o dist/homeserver-linux-amd64 \
+            ./cmd/server/main.go
+
+      - name: Build Storage Agent
+        run: |
+          CGO_ENABLED=0 \
+          GOOS=linux \
+          GOARCH=amd64 \
+          go build \
+            -ldflags="-s -w" \
+            -o dist/storage-agent-linux-amd64 \
+            ./cmd/storage-agent
+
+      - name: Copy Install Scripts
+        run: |
+          cp scripts/install.sh dist/
+          cp scripts/install-homeserver.sh dist/
+          cp scripts/install-storage-agent.sh dist/
+          cp scripts/common.sh dist/
+
+      - name: Make Scripts Executable
+        run: |
+          chmod +x dist/install.sh
+          chmod +x dist/install-homeserver.sh
+          chmod +x dist/install-storage-agent.sh
+
+      - name: Generate Checksums
+        run: |
+          cd dist
+          sha256sum homeserver-linux-amd64 \
+                    storage-agent-linux-amd64 \
+                    install.sh \
+                    install-homeserver.sh \
+                    install-storage-agent.sh \
+                    common.sh > checksums.txt
+
+      - name: Create Release Archive
+        run: |
+          tar -czf homeserver-release.tar.gz -C dist .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            homeserver-release.tar.gz
+            dist/checksums.txt
+            dist/homeserver-linux-amd64
+            dist/storage-agent-linux-amd64
+            dist/install.sh
+            dist/install-homeserver.sh
+            dist/install-storage-agent.sh
+            dist/common.sh
