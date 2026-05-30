@@ -30,16 +30,17 @@ func Connect() (*gorm.DB, error) {
 	db.Exec("PRAGMA journal_mode=WAL;")
 	db.Exec("PRAGMA synchronous=NORMAL;")
 
-	// Initialize FTS5 virtual table for node search
-	if err := initializeFTS5(db); err != nil {
-		return nil, fmt.Errorf("error initializing FTS5: %v", err)
-	}
+	// NOTE: FTS5 initialization is deferred until after AutoMigrate
+	// to ensure underlying tables (like `nodes`) exist.
 
 	log.Println("connected to sqlite database")
 	return db, nil
+	// return db, nil
 }
 
-func initializeFTS5(db *gorm.DB) error {
+// InitializeFTS5 creates the FTS5 virtual table and triggers for nodes.
+// Call this after running AutoMigrate so the `nodes` table exists.
+func InitializeFTS5(db *gorm.DB) error {
 	// Create FTS5 virtual table for full-text search on nodes
 	createVirtualTableSQL := `
 	CREATE VIRTUAL TABLE IF NOT EXISTS nodes_fts USING fts5(
