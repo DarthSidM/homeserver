@@ -32,7 +32,7 @@ DEFAULT_MOUNT="/storage/default"
 
 if [ "$EUID" -ne 0 ]; then
     echo "Please run as root:"
-    echo "sudo ./uninstall.sh"
+    echo "sudo ./uninstaller.sh"
     exit 1
 fi
 
@@ -43,6 +43,9 @@ fi
 echo
 echo "WARNING:"
 echo "This will permanently remove:"
+# possible binary names produced by different build scripts
+HOME_SERVER_BINARIES=("/usr/local/bin/homeserver" "/usr/local/bin/homeserver.exe" "/usr/local/bin/homeserver-linux-amd64")
+STORAGE_AGENT_BINARIES=("/usr/local/bin/storage-agent" "/usr/local/bin/storage-agent.exe" "/usr/local/bin/storage-agent-linux-amd64")
 echo
 echo "  - HomeServer"
 echo "  - Storage Agent"
@@ -51,8 +54,19 @@ echo "  - Environment configuration"
 echo "  - Storage mounts"
 echo "  - Stored files"
 echo
-read -p "Continue? (yes/no): " CONFIRM
+for b in "${HOME_SERVER_BINARIES[@]}"; do
+    if [ -f "$b" ]; then
+        echo "Removing $b"
+        rm -f "$b"
+    fi
+done
 
+for b in "${STORAGE_AGENT_BINARIES[@]}"; do
+    if [ -f "$b" ]; then
+        echo "Removing $b"
+        rm -f "$b"
+    fi
+done
 if [ "$CONFIRM" != "yes" ]; then
     echo "Aborted."
     exit 0
