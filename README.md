@@ -44,3 +44,10 @@
 /usr/local/bin/
 ├── homeserver
 └── storage-agent
+
+## install the homeserver application
+
+`LATEST=$(curl -s https://api.github.com/repos/DarthSidM/homeserver/releases/latest | grep tag_name | cut -d '"' -f4) && \
+curl -L "https://github.com/DarthSidM/homeserver/releases/download/${LATEST}/homeserver-release.tar.gz" -o homeserver-release.tar.gz && \
+tar -xzf homeserver-release.tar.gz && \
+sudo ./install.sh`
